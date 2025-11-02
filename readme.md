@@ -1,4 +1,6 @@
-# Global Citizens' Assembly Location Lottery System
+# Global Citizens' Assembly:
+# Location lottery system for Civic Assemblies
+(In the GCA, a Civic Assembly is the name given to a lottery selected, multi-week deliberation process following the norms of a citizens' assembly methodology)
 
 ## Overview
 
