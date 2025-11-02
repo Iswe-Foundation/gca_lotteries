@@ -273,3 +273,171 @@ Also watch out for ISO 3-letter country/region codes being inconsistent and chan
 ## License
 
 Licensed under GNU General Public License v3.0 as per the original.
+
+
+# Adendum: using the file `nd_gain_operations.py` to generate the bins of climate risk
+
+Overview
+
+This script processes **ND-GAIN (Notre Dame Global Adaptation Initiative)** climate vulnerability data to create "climate risk bins" that are used by the main lottery selection system. The purpose is to ensure representation from countries across different levels of climate vulnerability, with optional "boosting" to favor more vulnerable regions.
+
+## Purpose
+
+The main lottery system (`GCA_2526_Civic_Assembly_location_lottery.py`) enforces quotas on climate risk bins. This script:
+
+1. **Reads ND-GAIN climate vulnerability data** for all countries
+2. **Creates bins** (groupings) of countries by climate risk level
+3. **Optionally applies "boosting"** to increase representation of more vulnerable countries
+4. **Exports a configuration file** that the main lottery uses to assign countries to bins and set quota limits
+
+## ND-GAIN Data
+
+**What is ND-GAIN?**
+
+* A country-level index measuring vulnerability to climate change and readiness to adapt
+* Lower scores = higher vulnerability (countries at greater risk)
+* Higher scores = lower vulnerability (countries better prepared/less at risk)
+* Data source: [ND-GAIN Country Index](https://gain.nd.edu/our-work/country-index/)
+
+## How It Works
+
+### Step 1: Data Loading and Cleaning
+
+The script:
+
+* Loads ND-GAIN data from `resources/gain.csv`
+* Extracts the latest year's vulnerability scores
+* Removes countries with missing data (NaN values)
+* Creates a clean dataset with ISO3 country codes and scores
+
+    gain_data = pd.read_csv(path_to_reources + "gain.csv")
+    gain_latest_col = gain_data.columns[-1]  # Latest year's column
+    gain_latest = gain_data[['ISO3', 'Name', gain_latest_col]]
+
+### Step 2: Creating Bins
+
+Countries are grouped into bins based on their ND-GAIN scores using a histogram:
+
+* **Number of bins**: Configurable (e.g., 4 bins, 10 bins)
+* **Bin creation**: Uses `numpy.histogram()` to divide the score range into equal-width intervals
+* **Normalization**: Counts are normalized so they sum to 1.0 (representing proportions)
+
+**Example with 4 bins:**
+
+* Bin 1 (Most Vulnerable): ND-GAIN scores 0-25 (e.g., Chad, Somalia)
+* Bin 2 (High Vulnerability): ND-GAIN scores 25-50 (e.g., Bangladesh, Haiti)
+* Bin 3 (Moderate Vulnerability): ND-GAIN scores 50-75 (e.g., Brazil, India)
+* Bin 4 (Least Vulnerable): ND-GAIN scores 75-100 (e.g., Norway, Switzerland)
+
+**Important**: Lower ND-GAIN scores = higher vulnerability. The bins are reversed when displayed (Bin 1 is most vulnerable).
+
+### Step 3: Applying Boosting (Optional)
+
+By default, each bin gets representation proportional to the number of countries in that bin. **Boosting** allows you to increase representation of more vulnerable countries.
+
+#### Why Boost?
+
+Part of the role of participatory governance practices is to increase the voice of those who are otherwise unheard. In service of this, it can be argued that it may even be appropriately to over-represent such marginalized groups relative to the wider population. The boosting functions in this code offer some systematic, quantifiable ways to do this.
+
+#### Available Boost Functions
+
+1. **`linear`**: Linear increase favoring high vulnerability bins
+  
+  * Formula: `boost = 1 + (boost_factor × bin_index)`
+  * Gradually increases representation for more vulnerable bins
+2. **`polynomial`**: Polynomial increase (stronger effect)
+  
+  * Formula: `boost = bin_index^boost_factor`
+  * Creates a steeper curve favoring vulnerable countries
+3. **`exponential`**: Exponential increase (very strong effect)
+  
+  * Formula: `boost = exp(boost_factor × bin_index)`
+  * Dramatically increases representation of most vulnerable bins
+4. **`flat_then_ramp`**: Flat for first 2/3 of bins, then ramping up
+  
+  * First 67% of bins: boost = 1 (no change)
+  * Last 33% of bins: linear ramp up to `boost_factor`
+  * Protects moderate-risk countries while boosting high-risk ones
+5. **`just_boost_the_first_bin`**: Only boosts the most vulnerable bin
+  
+  * Most vulnerable bin: boost = `boost_factor` (e.g., 1.5× or 2×)
+  * All other bins: boost = 1 (no change)
+  * **Recommended for most use cases** - simple and effective
+6. **`none`**: No boosting (equal representation per bin based on country count)
+  
+
+#### Normalization After Boosting
+
+After applying boosts, the counts are normalized using `normalize_preserve_relative_min()`:
+
+* Preserves the relative proportions between bins
+* Scales so all proportions sum to 1.0
+* Ensures the most vulnerable bin doesn't become zero (even if very few countries)
+
+### Step 4: Export Configuration
+
+The script exports a CSV file with:
+
+* **Bin edges**: Climate risk score boundaries for each bin
+* **Original counts**: Proportional representation before boosting
+* **Boosted counts**: Proportional representation after boosting (used as quotas)
+* **Countries in bin**: List of ISO3 country codes in each bin
+
+**File naming**: `boosted_data_boost_method_{function}_num_bins_{bins}_bins_boosted_by{boost_factor}.csv`
+
+**Example**: `boosted_data_boost_method_just_boost_the_first_bin_num_bins_4_bins_boosted_by1.5.csv`
+
+## How This Integrates with the Main Lottery
+
+The exported CSV file is loaded by `GCA_2526_Civic_Assembly_location_lottery.py`:
+
+1. **Country Assignment**: Each country is assigned to its climate risk bin based on its ND-GAIN score
+2. **Quota Calculation**: Each bin's quota = `ceil(boosted_count × num_points)`
+  * Example: If Bin 1 has boosted_count = 0.35 and num_points = 105, then quota = 37
+3. **Quota Enforcement**: During Phase 4 of quota enforcement, no bin can exceed its quota
+4. **Result**: Ensures the final assembly has proportional representation from different climate risk levels
+
+Recommended Settings
+
+Based on experimentation in the code comments:
+
+* **Number of bins**: **4 bins** (more bins causes large countries to dominate their bins)
+* **Boost method**: **`just_boost_the_first_bin`** (simplest and most effective)
+* **Boost factor**: **1.5** to **2.0** (provides meaningful boost without overwhelming other bins)
+
+## Configuration Options
+
+Key parameters in the `main()` function or when calling `get_gain_bins_and_boosts()`:
+
+* **`bins`**: Number of climate risk bins to create (recommended: 4)
+* **`function_to_apply`**: Boost method ('none', 'linear', 'polynomial', 'exponential', 'flat_then_ramp', 'just_boost_the_first_bin')
+* **`boost_factor`**: Strength of boosting (1.0 = no boost, 1.5 = 50% boost, 2.0 = 100% boost)
+* **`plot_boost`**: Whether to display visualization of boost function
+
+## Output File Structure
+
+The exported CSV contains:
+
+| Column | Description |
+| --- | --- |
+| `bin_edges` | Climate risk score boundaries (e.g., 0, 25, 50, 75, 100) |
+| `original_counts` | Proportional representation before boosting (sums to 1.0) |
+| `boosted_counts` | Proportional representation after boosting (used for quotas, sums to 1.0) |
+| `countries_in_bin_ISO3` | List of ISO3 codes for countries in this bin (as Python list string) |
+
+**Example row:**
+
+    bin_edges,original_counts,boosted_counts,countries_in_bin_ISO3
+    0,0.25,0.35,"['TCD', 'SOM', 'CAF', 'NGA', ...]"
+
+## Limitations and Considerations
+
+1. **Missing Countries**: Countries not in the ND-GAIN dataset are assigned to a "None" bin with no quota limit in the main lottery.
+  
+2. **Bin Boundaries**: Equal-width bins may create uneven country distribution. Consider using custom bin edges if needed.
+  
+3. **Boost Factor Selection**: Requires experimentation. Too high = vulnerable bins dominate. Too low = little effect.
+  
+4. **Score Updates**: ND-GAIN scores are updated annually. Re-run this script with new data periodically.
+  
+5. **Large Countries in Bins**: Very large countries (e.g., India, China) can dominate their bins if they fall in a bin with few other countries. This is why 4 bins is recommended - more bins would increase this problem.
