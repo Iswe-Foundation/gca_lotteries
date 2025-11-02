@@ -3,7 +3,7 @@
 
 ## Overview
 
-This code implements a **population-weighted random lottery system** for selecting the geographic locations of Assembly Members for the Global Citizens' Assembly's (GCA) Civic Assembly. It is based on [the lottery selection code from the 2021 Global Assembly](https://github.com/GlobalAssembly/global-select-app/blob/main/global-select-admin-centroids.py). The system ensures that each person worldwide has an **equal probability** of having their location selected, while simultaneously enforcing multiple quota systems to ensure geographic, demographic, and climate-risk diversity.
+This code implements a **population-weighted random lottery system** for selecting the geographic locations of Assembly Members for the Global Citizens' Assembly's (GCA) Civic Assembly. It is based on [the lottery selection code from the 2021 Global Assembly's Core Assembly](https://github.com/GlobalAssembly/global-select-app/blob/main/global-select-admin-centroids.py). The system ensures that each person worldwide has an **equal probability** of having their location selected, while simultaneously enforcing multiple quota systems to ensure geographic, demographic, and climate-risk diversity.
 
 ## Purpose
 
