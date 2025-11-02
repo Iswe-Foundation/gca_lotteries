@@ -117,7 +117,7 @@ Before selection, all administrative units are randomly shuffled:
 ## Data Sources
 
 * **Population Data**: Gridded Population of the World (GPW) v4 Admin Unit Center Points Population Estimates Rev11
-  * [NASA EarthData]([Gridded Population of the World, Version 4 (GPWv4): Administrative Unit Center Points with Population Estimates, Revision 11 | NASA Earthdata](https://www.earthdata.nasa.gov/data/catalog/sedac-ciesin-sedac-gpwv4-aducppe-r11-4.11)) (Please note that over the course of 2025 the location of these files seemed to move a few times, and were even unavailable for a while. This could happen again.)
+  * [Gridded Population of the World, Version 4 (GPWv4): Administrative Unit Center Points with Population Estimates, Revision 11 | NASA Earthdata](https://www.earthdata.nasa.gov/data/catalog/sedac-ciesin-sedac-gpwv4-aducppe-r11-4.11)) (Please note that over the course of 2025 the location of these files seemed to move a few times, and were even unavailable for a while. This could happen again.)
   * Contains: Administrative unit centroids with 2020 population estimates
 * **UN Region Classifications**: Custom file mapping countries to UN regional groups
 * **Climate Risk Data**: Processed through `nd_gain_operations.py` to create risk bins !!!!!!!!!!!!!!!!!!!!!!!!!!!
